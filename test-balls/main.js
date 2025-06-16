@@ -10,9 +10,7 @@ async function main() {
   gl.cullFace(gl.BACK);
 
   WebGLUtils.resizeCanvasToWindow(gl);
-
-  const vertices = await WebGLUtils.loadOBJ("../temp-obj/temp-table.obj", true);
-  const verticesball = await WebGLUtils.loadOBJ("../temp-obj/sphere.obj",true);
+  const vertices = await WebGLUtils.loadOBJ("../temp-obj/sphere.obj",true);
   const program = await WebGLUtils.createProgram(gl, "vertex-shader.glsl", "fragment-shader.glsl");
 
   const mouse = new MouseInput(gl.canvas);
@@ -26,12 +24,7 @@ async function main() {
     radius = Math.max(2, Math.min(30, radius)); 
   });
 
-  const VAO = WebGLUtils.createVAO(gl, program, vertices, 8, [
-    { name: "in_position", size: 3, offset: 0 },
-    { name: "in_normal", size: 3, offset: 5 },
-  ]);
-
-    const ballVAO = WebGLUtils.createVAO(gl, program, verticesball, 8, [
+    const VAO = WebGLUtils.createVAO(gl, program, vertices, 8, [
     { name: "in_position", size: 3, offset: 0 },
     { name: "in_normal", size: 3, offset: 5 },
   ]);
@@ -67,6 +60,8 @@ async function main() {
     );
     // Matrices
     const modelMat = mat4.create();
+    mat4.translate(modelMat, modelMat, [0, 2, 0]); // Move up by 2 units
+    mat4.scale(modelMat, modelMat, [0.5, 0.5, 0.5]);
     const viewMat = mat4.create();
     const projectionMat = mat4.create();
     mat4.lookAt(viewMat, eye, center, up);
@@ -83,24 +78,6 @@ async function main() {
     gl.useProgram(program);
     gl.bindVertexArray(VAO);
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 8);
-
-    // Then apply your transformations
-    mat4.lookAt(viewMat, eye, center, up);
-    mat4.perspective(projectionMat, Math.PI / 4, gl.canvas.width / gl.canvas.height, 0.1, 100);
-    mat4.multiply(mvpMat, projectionMat, viewMat);
-    mat4.multiply(mvpMat, mvpMat, modelMat);
-    const ballModelMat = mat4.create();
-
-    mat4.translate(ballModelMat, ballModelMat, [0, 5, 0]); // Move up by 5 units
-    mat4.scale(ballModelMat, ballModelMat, [0.5, 0.5, 0.5]); // Scale the ball
-  
-    const ballMvpMat = mat4.create();
-    mat4.multiply(ballMvpMat, projectionMat, viewMat);
-    mat4.multiply(ballMvpMat, ballMvpMat, ballModelMat);
-    WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [ballMvpMat]);
-    gl.bindVertexArray(ballVAO);
-    gl.drawArrays(gl.TRIANGLES, 0, verticesball.length/8);
-
     requestAnimationFrame(render);
   }
 
