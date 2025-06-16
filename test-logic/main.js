@@ -15,6 +15,66 @@ async function main() {
   const verticesball = await WebGLUtils.loadOBJ("../temp-obj/temp-ball.obj",true);
   const program = await WebGLUtils.createProgram(gl, "vertex-shader.glsl", "fragment-shader.glsl");
 
+const ballPositions = [
+    // Cue ball
+    [0.0, 0.57, -1.0],        // Cue ball (moved to opposite side)
+    // Triangle formation (15 balls)
+    [0.0, 0.57, 1.0],         // Front
+    [0.087, 0.57, 1.15],      // Second row left
+    [-0.087, 0.57, 1.15],     // Second row right
+    [0.174, 0.57, 1.3],       // Third row left
+    [0.0, 0.57, 1.3],         // Third row middle
+    [-0.174, 0.57, 1.3],      // Third row right
+    [0.261, 0.57, 1.45],      // Fourth row left
+    [0.087, 0.57, 1.45],      // Fourth row middle left
+    [-0.087, 0.57, 1.45],     // Fourth row middle right
+    [-0.261, 0.57, 1.45],     // Fourth row right
+    [0.348, 0.57, 1.6],       // Fifth row leftmost
+    [0.174, 0.57, 1.6],       // Fifth row middle left
+    [0.0, 0.57, 1.6],         // Fifth row middle
+    [-0.174, 0.57, 1.6],      // Fifth row middle right
+    [-0.348, 0.57, 1.6],      // Fifth row rightmost
+];
+
+// Ball colors (you might want to adjust these)
+const ballColors = [
+    [1.0, 1.0, 1.0],   // Cue ball (white)
+    [1.0, 1.0, 0.0],   // Yellow
+    [0.0, 0.0, 1.0],   // Blue
+    [1.0, 0.0, 0.0],   // Red
+    [0.57, 0.0, 0.57],   // Purple
+    [0.0, 0.0, 0.0],   // 8 ball (black)
+    [0.0, 0.57, 0.0],   // Green
+    [0.8, 0.4, 0.0],   // Brown
+    [1.0, 0.0, 0.0],   // Red
+    [1.0, 1.0, 0.0],   // Yellow
+    [0.0, 0.0, 1.0],   // Blue
+    [1.0, 0.57, 0.0],   // Orange
+    [0.57, 0.0, 0.57],   // Purple
+    [0.0, 0.57, 0.0],   // Green
+    [0.8, 0.4, 0.0],   // Brown
+    [1.0, 0.57, 0.0],   // Orange
+];
+
+function renderBalls(projectionMat, viewMat) {
+    for (let i = 0; i < ballPositions.length; i++) {
+        const ballModelMat = mat4.create();
+        mat4.translate(ballModelMat, ballModelMat, ballPositions[i]);
+        mat4.scale(ballModelMat, ballModelMat, [0.09, 0.09, 0.09]);
+
+        const ballMvpMat = mat4.create();
+        mat4.multiply(ballMvpMat, projectionMat, viewMat);
+        mat4.multiply(ballMvpMat, ballMvpMat, ballModelMat);
+
+        WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [ballMvpMat]);
+        WebGLUtils.setUniform3f(gl, program, ["u_color"], ballColors[i]);
+        gl.useProgram(program);
+        gl.bindVertexArray(VAOball);
+        gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+    }
+}
+
+
   const mouse = new MouseInput(gl.canvas);
   let yaw = 0;
   let pitch = 2.4;
@@ -33,7 +93,7 @@ async function main() {
 
   const VAOball = WebGLUtils.createVAO(gl, program, verticesball, 8, [
     { name: "in_position", size: 3, offset: 0 },
-    { name: "in_normal", size: 3, offset: 3 },
+    { name: "in_normal", size: 3, offset: 5 },
   ]);
 
   function render() {
@@ -79,8 +139,8 @@ async function main() {
 
     // Ball matrices
     const ballModelMat = mat4.create();
-    mat4.translate(ballModelMat, ballModelMat, [0, 0.578, 0]); // Position ball higher
-    mat4.scale(ballModelMat, ballModelMat, [0.1, 0.1, 0.1]); // Make ball smaller
+    mat4.translate(ballModelMat, ballModelMat, [0, 0.57, 0]); // Position ball higher
+    mat4.scale(ballModelMat, ballModelMat, [0.09, 0.09, 0.]); // Make ball smaller
 
     // MVP for ball
     const ballMvpMat = mat4.create();
@@ -95,11 +155,7 @@ async function main() {
     gl.bindVertexArray(VAO);
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 8);
 
-    // Render ball
-    WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [ballMvpMat]);
-    gl.useProgram(program);
-    gl.bindVertexArray(VAOball);
-    gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+    renderBalls(projectionMat, viewMat);
 
 
     requestAnimationFrame(render);
