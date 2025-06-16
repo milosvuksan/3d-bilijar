@@ -21,7 +21,13 @@
 
 <body>
 	<canvas id="glcanvas"></canvas>
-
+	<div id="controls" style="position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.8); padding: 10px; border-radius: 5px;">
+    <button id="hitBall">Hit Ball</button>
+    <br>
+    <label for="forceSlider">Force:</label>
+    <input type="range" id="forceSlider" min="0" max="100" value="50">
+    <span id="forceValue">50</span>
+	</div>
 	<script type="module" src="main.js"></script>
 </body>
 

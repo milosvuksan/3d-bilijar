@@ -17,23 +17,28 @@ async function main() {
 
 const ballPositions = [
     // Cue ball
-    [0.0, 0.57, -1.0],        // Cue ball (moved to opposite side)
+    [0.0, 0.57, -1.0],        // Cue ball (white ball)
+    
     // Triangle formation (15 balls)
-    [0.0, 0.57, 1.0],         // Front
-    [0.087, 0.57, 1.15],      // Second row left
-    [-0.087, 0.57, 1.15],     // Second row right
-    [0.174, 0.57, 1.3],       // Third row left
-    [0.0, 0.57, 1.3],         // Third row middle
-    [-0.174, 0.57, 1.3],      // Third row right
-    [0.261, 0.57, 1.45],      // Fourth row left
-    [0.087, 0.57, 1.45],      // Fourth row middle left
-    [-0.087, 0.57, 1.45],     // Fourth row middle right
-    [-0.261, 0.57, 1.45],     // Fourth row right
-    [0.348, 0.57, 1.6],       // Fifth row leftmost
-    [0.174, 0.57, 1.6],       // Fifth row middle left
-    [0.0, 0.57, 1.6],         // Fifth row middle
-    [-0.174, 0.57, 1.6],      // Fifth row middle right
-    [-0.348, 0.57, 1.6],      // Fifth row rightmost
+    [0.0, 0.57, 1.0],         // Front ball
+    
+    [-0.065, 0.57, 1.112],    // Second row left
+    [0.065, 0.57, 1.112],     // Second row right
+    
+    [-0.13, 0.57, 1.224],     // Third row left 
+    [0.0, 0.57, 1.224],       // Third row middle
+    [0.13, 0.57, 1.224],      // Third row right
+    
+    [-0.195, 0.57, 1.336],    // Fourth row left
+    [-0.065, 0.57, 1.336],    // Fourth row middle left
+    [0.065, 0.57, 1.336],     // Fourth row middle right  
+    [0.195, 0.57, 1.336],     // Fourth row right
+    
+    [-0.26, 0.57, 1.448],     // Fifth row leftmost
+    [-0.13, 0.57, 1.448],     // Fifth row middle left
+    [0.0, 0.57, 1.448],       // Fifth row middle
+    [0.13, 0.57, 1.448],      // Fifth row middle right
+    [0.26, 0.57, 1.448],      // Fifth row rightmost
 ];
 
 // Ball colors (you might want to adjust these)
