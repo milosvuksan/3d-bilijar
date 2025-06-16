@@ -10,7 +10,7 @@ async function main() {
   gl.cullFace(gl.BACK);
 
   WebGLUtils.resizeCanvasToWindow(gl);
-  const vertices = await WebGLUtils.loadOBJ("../temp-obj/sphere.obj",true);
+  const vertices = await WebGLUtils.loadOBJ("../temp-obj/temp-ball.obj",true);
   const program = await WebGLUtils.createProgram(gl, "vertex-shader.glsl", "fragment-shader.glsl");
 
   const mouse = new MouseInput(gl.canvas);
@@ -61,7 +61,7 @@ async function main() {
     // Matrices
     const modelMat = mat4.create();
     mat4.translate(modelMat, modelMat, [0, 2, 0]); // Move up by 2 units
-    mat4.scale(modelMat, modelMat, [0.5, 0.5, 0.5]);
+    mat4.scale(modelMat, modelMat, [1, 1, 1]);
     const viewMat = mat4.create();
     const projectionMat = mat4.create();
     mat4.lookAt(viewMat, eye, center, up);
