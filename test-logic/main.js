@@ -48,6 +48,17 @@ async function main() {
     const center = [0, 0, 0];
     const up = [0, 1, 0];
 
+    const lightDir = vec3.fromValues(0.0, 2.0, 0.0);
+    const lightColor = vec3.fromValues(1.0, 1.0, 1.0); // white light
+
+    vec3.normalize(lightDir, lightDir);
+
+    WebGLUtils.setUniform3f(gl, program,
+    ["u_light_direction",
+      "u_light_color"],
+    [lightDir,
+    lightColor]
+    );
     // Matrices
     const modelMat = mat4.create();
     const viewMat = mat4.create();
