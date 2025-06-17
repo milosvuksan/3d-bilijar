@@ -18,27 +18,34 @@ async function main() {
 const ballPositions = [
     // Cue ball
     [0.0, 0.57, -1.0],        // Cue ball (white ball)
-    
+
     // Triangle formation (15 balls)
-    [0.0, 0.57, 1.0],         // Front ball
-    
-    [-0.065, 0.57, 1.112],    // Second row left
-    [0.065, 0.57, 1.112],     // Second row right
-    
-    [-0.13, 0.57, 1.224],     // Third row left 
-    [0.0, 0.57, 1.224],       // Third row middle
-    [0.13, 0.57, 1.224],      // Third row right
-    
-    [-0.195, 0.57, 1.336],    // Fourth row left
-    [-0.065, 0.57, 1.336],    // Fourth row middle left
-    [0.065, 0.57, 1.336],     // Fourth row middle right  
-    [0.195, 0.57, 1.336],     // Fourth row right
-    
-    [-0.26, 0.57, 1.448],     // Fifth row leftmost
-    [-0.13, 0.57, 1.448],     // Fifth row middle left
-    [0.0, 0.57, 1.448],       // Fifth row middle
-    [0.13, 0.57, 1.448],      // Fifth row middle right
-    [0.26, 0.57, 1.448],      // Fifth row rightmost
+    // The triangle's front is at z = 1.0, each row behind is spaced by sqrt(3)*radius
+    // Each ball is 0.09 radius, so row spacing is ~0.156
+    // Centered on x = 0
+    [0.0, 0.57, 1.0], // Front ball
+
+    // Second row (2 balls)
+    [-0.09, 0.57, 1.0 + 0.156], // left
+    [0.09, 0.57, 1.0 + 0.156],  // right
+
+    // Third row (3 balls)
+    [-0.18, 0.57, 1.0 + 0.156 * 2],
+    [0.0, 0.57, 1.0 + 0.156 * 2],
+    [0.18, 0.57, 1.0 + 0.156 * 2],
+
+    // Fourth row (4 balls)
+    [-0.27, 0.57, 1.0 + 0.156 * 3],
+    [-0.09, 0.57, 1.0 + 0.156 * 3],
+    [0.09, 0.57, 1.0 + 0.156 * 3],
+    [0.27, 0.57, 1.0 + 0.156 * 3],
+
+    // Fifth row (5 balls)
+    [-0.36, 0.57, 1.0 + 0.156 * 4],
+    [-0.18, 0.57, 1.0 + 0.156 * 4],
+    [0.0, 0.57, 1.0 + 0.156 * 4],
+    [0.18, 0.57, 1.0 + 0.156 * 4],
+    [0.36, 0.57, 1.0 + 0.156 * 4],
 ];
 
 // Ball colors (you might want to adjust these)
@@ -135,27 +142,24 @@ function renderBalls(projectionMat, viewMat) {
   // Keyboard event listeners
   window.addEventListener('keydown', (e) => {
     keys[e.key.toLowerCase()] = true;
+    // Start aiming/charging when space is pressed
+    if ((e.key === ' ' || e.code === 'Space') && canShoot() && !isAiming) {
+      isAiming = true;
+      shootStartTime = Date.now();
+      shootPower = 0;
+      e.preventDefault();
+    }
   });
 
   window.addEventListener('keyup', (e) => {
     keys[e.key.toLowerCase()] = false;
-  });
-
-  gl.canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0 && canShoot()) { // Only allow shooting if cue ball is stationary and not pocketed
-      isAiming = true;
-      shootStartTime = Date.now();
-      shootPower = 0;
-    }
-  });
-
-  gl.canvas.addEventListener('mouseup', (e) => {
-    if (e.button === 0 && isAiming && canShoot()) {
+    // Shoot when space is released
+    if ((e.key === ' ' || e.code === 'Space') && isAiming && canShoot()) {
       isAiming = false;
-      // Shoot the cue ball using angle
       ballVelocities[0][0] = Math.sin(aimAngle) * shootPower;
       ballVelocities[0][2] = Math.cos(aimAngle) * shootPower;
       shootPower = 0;
+      e.preventDefault();
     }
   });
 
