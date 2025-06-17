@@ -49,24 +49,24 @@ const ballPositions = [
     [0.36, 0.67, 1.0 + 0.156 * 4],
 ];
 
-// Ball colors (you might want to adjust these)
+// Ball colors: cue (white), 7 blue, 8-ball (black), 7 red
 const ballColors = [
     [1.0, 1.0, 1.0],   // Cue ball (white)
-    [1.0, 1.0, 0.0],   // Yellow
     [0.0, 0.0, 1.0],   // Blue
-    [1.0, 0.0, 0.0],   // Red
-    [0.57, 0.0, 0.57],   // Purple
+    [0.0, 0.0, 1.0],   // Blue
+    [0.0, 0.0, 1.0],   // Blue
+    [0.0, 0.0, 1.0],   // Blue
     [0.0, 0.0, 0.0],   // 8 ball (black)
-    [0.0, 0.57, 0.0],   // Green
-    [0.8, 0.4, 0.0],   // Brown
-    [1.0, 0.0, 0.0],   // Red
-    [1.0, 1.0, 0.0],   // Yellow
     [0.0, 0.0, 1.0],   // Blue
-    [1.0, 0.57, 0.0],   // Orange
-    [0.57, 0.0, 0.57],   // Purple
-    [0.0, 0.57, 0.0],   // Green
-    [0.8, 0.4, 0.0],   // Brown
-    [1.0, 0.57, 0.0],   // Orange
+    [0.0, 0.0, 1.0],   // Blue
+    [0.0, 0.0, 1.0],   // Blue
+    [1.0, 0.0, 0.0],   // Red
+    [1.0, 0.0, 0.0],   // Red
+    [1.0, 0.0, 0.0],   // Red
+    [1.0, 0.0, 0.0],   // Red
+    [1.0, 0.0, 0.0],   // Red
+    [1.0, 0.0, 0.0],   // Red
+    [1.0, 0.0, 0.0],   // Red
 ];
 
 function renderBalls(projectionMat, viewMat) {
