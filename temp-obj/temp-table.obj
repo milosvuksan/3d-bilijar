@@ -1,41 +1,22 @@
-o Cuboid
-v 1.000000 -0.5 -2.000000
-v 1.000000 -0.5 2.000000
-v -1.000000 -0.5 2.000000
-v -1.000000 -0.5 -2.000000
-v 1.000000 0.5 -2.000000
-v 1.000000 0.5 2.000000
-v -1.000000 0.5 2.000000
-v -1.000000 0.5 -2.000000
-vt 1.000000 0.333333
-vt 1.000000 0.666667
-vt 0.666667 0.666667
-vt 0.666667 0.333333
-vt 0.666667 0.000000
-vt 0.000000 0.333333
-vt 0.000000 0.000000
-vt 0.333333 0.000000
-vt 0.333333 1.000000
-vt 0.000000 1.000000
-vt 0.000000 0.666667
-vt 0.333333 0.333333
-vt 0.333333 0.666667
-vt 1.000000 0.000000
-vn 0.000000 -1.000000 0.000000
-vn 0.000000 1.000000 0.000000
-vn 1.000000 0.000000 0.000000
-vn 0.000000 0.000000 1.000000
-vn -1.000000 0.000000 0.000000
-vn 0.000000 0.000000 -1.000000
-f 2/1/1 3/2/1 4/3/1
-f 8/1/2 7/4/2 6/5/2
-f 5/6/3 6/7/3 2/8/3
-f 6/8/4 7/5/4 3/4/4
-f 3/9/5 7/10/5 8/11/5
-f 1/12/6 4/13/6 8/11/6
-f 1/4/1 2/1/1 4/3/1
-f 5/14/2 8/1/2 6/5/2
-f 1/12/3 5/6/3 2/8/3
-f 2/12/4 6/8/4 3/4/4
-f 4/13/5 3/9/5 8/11/5
-f 5/6/6 1/12/6 8/11/6
+# Simple rectangular table top with 6 holes (pockets) at corners and sides
+# Table size: x [-1.5, 1.5], z [-3.0, 3.0], y = 0.57
+
+# Vertices (excluding pocket areas)
+v -1.5 0.57 -3.0
+v  1.5 0.57 -3.0
+v  1.5 0.57  3.0
+v -1.5 0.57  3.0
+
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+
+# Table surface (as a single quad)
+f 1//1 2//2 3//3 4//4
+
+# Pockets are not modeled as geometry, but you can add visual cues for their positions:
+# Corners: (-1.5, -3.0), (1.5, -3.0), (-1.5, 3.0), (1.5, 3.0)
+# Sides: (0, -3.0), (0, 3.0)
+# If you want to model actual holes, you would need to create a mesh with circular cutouts at these positions.
+# For most billiard visualizations, the holes are rendered in the shader or as black spheres (as in your JS code).

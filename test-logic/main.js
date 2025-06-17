@@ -87,26 +87,36 @@ function renderBalls(projectionMat, viewMat) {
   const ballVelocities = ballPositions.map(() => [0, 0, 0]);
   const friction = 0.98;
   // More accurate table boundaries for standard pool table
-  const tableMinX = -1.37, tableMaxX = 1.37; // Standard 9ft table is ~2.74m wide
-  const tableMinZ = -2.74, tableMaxZ = 2.74; // Standard 9ft table is ~5.48m long
+  // Set boundaries to match the table mesh size (assuming OBJ is centered at origin)
+  // Adjust these values to match your OBJ table size if needed
+  // Make the table bigger (e.g., 3.0m x 6.0m)
+  const tableMinX = -1.5, tableMaxX = 1.5; // Table width: 3.0m
+  const tableMinZ = -3.0, tableMaxZ = 3.0; // Table length: 6.0m
 
   // Pocket positions (6 pockets in 8-ball pool)
+  // Place pockets at the four corners and the middle of the long sides, on the table surface
+  // Use a slightly larger radius so the holes are bigger
+  const pocketRadiusCorner = 0.17;
+  const pocketRadiusSide = 0.15;
+  // Y position for pockets (should match table surface, adjust if needed)
+  const pocketY = 0.57;
+
   const pockets = [
-    // Corner pockets
-    { x: tableMinX, z: tableMinZ, radius: 0.12 }, // Bottom left
-    { x: tableMaxX, z: tableMinZ, radius: 0.12 }, // Bottom right
-    { x: tableMinX, z: tableMaxZ, radius: 0.12 }, // Top left
-    { x: tableMaxX, z: tableMaxZ, radius: 0.12 }, // Top right
-    // Side pockets (middle of long sides)
-    { x: tableMinX, z: 0, radius: 0.10 }, // Left side
-    { x: tableMaxX, z: 0, radius: 0.10 }  // Right side
+    // Corner pockets (on the table corners)
+    { x: tableMinX, z: tableMinZ, y: pocketY, radius: pocketRadiusCorner }, // Bottom left
+    { x: tableMaxX, z: tableMinZ, y: pocketY, radius: pocketRadiusCorner }, // Bottom right
+    { x: tableMinX, z: tableMaxZ, y: pocketY, radius: pocketRadiusCorner }, // Top left
+    { x: tableMaxX, z: tableMaxZ, y: pocketY, radius: pocketRadiusCorner }, // Top right
+    // Side pockets (middle of left and right sides)
+    { x: tableMinX, z: 0, y: pocketY, radius: pocketRadiusSide }, // Left center
+    { x: tableMaxX, z: 0, y: pocketY, radius: pocketRadiusSide }, // Right center
   ];
 
   // Track pocketed balls
   const pocketedBalls = new Array(ballPositions.length).fill(false);
 
   // Shooting variables
-  let isAiming = false;
+  let isAiming = false; // Now used only for charging/shooting, not for aiming direction
   let shootPower = 0;
   let aimAngle = 0; // Angle in radians
   let maxShootPower = 0.5;
@@ -132,8 +142,7 @@ function renderBalls(projectionMat, viewMat) {
   });
 
   gl.canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0) { // Left mouse button
-      isMouseDown = true;
+    if (e.button === 0 && canShoot()) { // Only allow shooting if cue ball is stationary and not pocketed
       isAiming = true;
       shootStartTime = Date.now();
       shootPower = 0;
@@ -141,17 +150,22 @@ function renderBalls(projectionMat, viewMat) {
   });
 
   gl.canvas.addEventListener('mouseup', (e) => {
-    if (e.button === 0 && isAiming) { // Left mouse button
-      isMouseDown = false;
+    if (e.button === 0 && isAiming && canShoot()) {
       isAiming = false;
-      
       // Shoot the cue ball using angle
       ballVelocities[0][0] = Math.sin(aimAngle) * shootPower;
       ballVelocities[0][2] = Math.cos(aimAngle) * shootPower;
-      
       shootPower = 0;
     }
   });
+
+  // Helper to check if cue ball is stationary and not pocketed
+  function canShoot() {
+    // Cue ball is not pocketed and not moving
+    return !pocketedBalls[0] &&
+      Math.abs(ballVelocities[0][0]) < 0.001 &&
+      Math.abs(ballVelocities[0][2]) < 0.001;
+  }
 
   // Remove the old mousemove event listener for aiming
   // ...existing code...
@@ -227,6 +241,9 @@ function renderBalls(projectionMat, viewMat) {
     }
   }
 
+  // Default cue ball position
+  const defaultCueBallPosition = [0.0, 0.57, -1.0];
+
   function checkPocketCollision(ballIndex) {
     const pos = ballPositions[ballIndex];
     
@@ -243,6 +260,21 @@ function renderBalls(projectionMat, viewMat) {
         ballVelocities[ballIndex][2] = 0;
         // Move ball below table (out of sight)
         ballPositions[ballIndex][1] = -1;
+
+        // If cue ball (white ball) is pocketed, respot it
+        if (ballIndex === 0) {
+          // Use setTimeout to respot after a short delay for realism (optional)
+          setTimeout(() => {
+            ballPositions[0][0] = defaultCueBallPosition[0];
+            ballPositions[0][1] = defaultCueBallPosition[1];
+            ballPositions[0][2] = defaultCueBallPosition[2];
+            ballVelocities[0][0] = 0;
+            ballVelocities[0][1] = 0;
+            ballVelocities[0][2] = 0;
+            pocketedBalls[0] = false;
+          }, 500); // 0.5s delay before respotting
+        }
+
         return true;
       }
     }
@@ -250,8 +282,8 @@ function renderBalls(projectionMat, viewMat) {
   }
 
   function updatePhysics() {
-    // Handle aim angle input
-    if (isAiming) {
+    // Allow aim angle input if cue ball is stationary and not pocketed
+    if (canShoot()) {
       if (keys['a'] || keys['arrowleft']) {
         aimAngle -= 0.05;
       }
@@ -303,7 +335,8 @@ function renderBalls(projectionMat, viewMat) {
   }
 
   function renderCueStick(projectionMat, viewMat) {
-    if (!isAiming) return;
+    // Always show cue stick if cue ball is stationary and not pocketed
+    if (!canShoot() && !isAiming) return;
     
     const cuePos = ballPositions[0]; // Cue ball position
     const stickLength = 1.5 + shootPower * 2;
@@ -336,12 +369,115 @@ function renderBalls(projectionMat, viewMat) {
     gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
   }
 
+  // --- Update rendering of pockets to use correct Y position ---
+  function renderPockets(projectionMat, viewMat) {
+    for (let pocket of pockets) {
+      const pocketModelMat = mat4.create();
+      mat4.translate(pocketModelMat, pocketModelMat, [pocket.x, pocket.y, pocket.z]);
+      mat4.scale(pocketModelMat, pocketModelMat, [pocket.radius, pocket.radius, pocket.radius]);
+      const pocketMvpMat = mat4.create();
+      mat4.multiply(pocketMvpMat, projectionMat, viewMat);
+      mat4.multiply(pocketMvpMat, pocketMvpMat, pocketModelMat);
+      WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [pocketMvpMat]);
+      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0, 0, 0]); // Black color for pocket
+      gl.useProgram(program);
+      gl.bindVertexArray(VAOball);
+      gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+    }
+  }
+
+  // Helper: Brown rail rectangles between corners
+  function renderRails(projectionMat, viewMat) {
+    // Define the 4 corners for easier reference
+    const corners = [
+      { x: tableMinX, z: tableMinZ }, // Bottom left
+      { x: tableMaxX, z: tableMinZ }, // Bottom right
+      { x: tableMaxX, z: tableMaxZ }, // Top right
+      { x: tableMinX, z: tableMaxZ }, // Top left
+    ];
+    const railY = pocketY + 0.01; // Slightly above table surface
+    const railWidth = 0.18; // Thickness of the rail (adjust as needed)
+    const railHeight = 0.04;
+
+    // Calculate rail lengths so they run between pockets, not over them
+    const railLengthX = Math.abs(tableMaxX - tableMinX) - 2 * pocketRadiusCorner;
+    const railLengthZ = Math.abs(tableMaxZ - tableMinZ) - 2 * pocketRadiusCorner;
+
+    // Horizontal rails (bottom and top)
+    // Bottom rail: between bottom-left and bottom-right pockets
+    {
+      const z = tableMinZ;
+      const xMid = (tableMinX + tableMaxX) / 2;
+      const railModelMat = mat4.create();
+      // Move rail center between pockets, not corners
+      mat4.translate(railModelMat, railModelMat, [xMid, railY, z]);
+      mat4.scale(railModelMat, railModelMat, [railLengthX / 2, railHeight, railWidth / 2]);
+      const railMvpMat = mat4.create();
+      mat4.multiply(railMvpMat, projectionMat, viewMat);
+      mat4.multiply(railMvpMat, railMvpMat, railModelMat);
+      WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
+      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0.4, 0.2, 0.05]);
+      gl.useProgram(program);
+      gl.bindVertexArray(VAOball);
+      gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+    }
+    // Top rail: between top-left and top-right pockets
+    {
+      const z = tableMaxZ;
+      const xMid = (tableMinX + tableMaxX) / 2;
+      const railModelMat = mat4.create();
+      mat4.translate(railModelMat, railModelMat, [xMid, railY, z]);
+      mat4.scale(railModelMat, railModelMat, [railLengthX / 2, railHeight, railWidth / 2]);
+      const railMvpMat = mat4.create();
+      mat4.multiply(railMvpMat, projectionMat, viewMat);
+      mat4.multiply(railMvpMat, railMvpMat, railModelMat);
+      WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
+      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0.4, 0.2, 0.05]);
+      gl.useProgram(program);
+      gl.bindVertexArray(VAOball);
+      gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+    }
+    // Vertical rails (left and right)
+    // Left rail: between bottom-left and top-left pockets
+    {
+      const x = tableMinX;
+      const zMid = (tableMinZ + tableMaxZ) / 2;
+      const railModelMat = mat4.create();
+      mat4.translate(railModelMat, railModelMat, [x, railY, zMid]);
+      mat4.scale(railModelMat, railModelMat, [railWidth / 2, railHeight, railLengthZ / 2]);
+      const railMvpMat = mat4.create();
+      mat4.multiply(railMvpMat, projectionMat, viewMat);
+      mat4.multiply(railMvpMat, railMvpMat, railModelMat);
+      WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
+      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0.4, 0.2, 0.05]);
+      gl.useProgram(program);
+      gl.bindVertexArray(VAOball);
+      gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+    }
+    // Right rail: between bottom-right and top-right pockets
+    {
+      const x = tableMaxX;
+      const zMid = (tableMinZ + tableMaxZ) / 2;
+      const railModelMat = mat4.create();
+      mat4.translate(railModelMat, railModelMat, [x, railY, zMid]);
+      mat4.scale(railModelMat, railModelMat, [railWidth / 2, railHeight, railLengthZ / 2]);
+      const railMvpMat = mat4.create();
+      mat4.multiply(railMvpMat, projectionMat, viewMat);
+      mat4.multiply(railMvpMat, railMvpMat, railModelMat);
+      WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
+      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0.4, 0.2, 0.05]);
+      gl.useProgram(program);
+      gl.bindVertexArray(VAOball);
+      gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+    }
+  }
+
   function render() {
     // Update physics
     updatePhysics();
     
-    // Update shoot power while aiming
-    if (isMouseDown && isAiming) {
+    // Update shoot power while charging
+    if (isAiming && canShoot()) {
       const elapsed = (Date.now() - shootStartTime) / 1000;
       shootPower = Math.min(elapsed * 0.2, maxShootPower);
     }
@@ -397,13 +533,15 @@ function renderBalls(projectionMat, viewMat) {
     mat4.multiply(ballMvpMat, ballMvpMat, ballModelMat);
     WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [tableMvpMat]);
     // Render table
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(0.0, 0.3, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
 
     gl.bindVertexArray(VAO);
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 8);
 
+    renderRails(projectionMat, viewMat); // <-- Draw brown rails
+    renderPockets(projectionMat, viewMat); // Draw pockets as holes
     renderBalls(projectionMat, viewMat);
     renderCueStick(projectionMat, viewMat);
 
