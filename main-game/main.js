@@ -359,7 +359,7 @@ import MouseInput from '../MouseInput.js';
         gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
       }
     }
-
+    //render borders around table
     function renderRails(projectionMat, viewMat) {
       const corners = [
         { x: tableMinX, z: tableMinZ }, 
