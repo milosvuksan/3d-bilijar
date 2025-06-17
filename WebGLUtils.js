@@ -85,11 +85,14 @@ const WebGLUtils = {
 	setUniform3f(gl, program, uniformNames, values) {
 		gl.useProgram(program);
 		for (let i = 0; i < uniformNames.length; i++) {
+			let v = values[i];
+			if (!Array.isArray(v)) v = [v[0], v[1], v[2]];
+			console.log(`Setting uniform ${uniformNames[i]} to`, v); // Debug print
 			gl.uniform3f(
 				gl.getUniformLocation(program, uniformNames[i]),
-				values[i][0],
-				values[i][1],
-				values[i][2]
+				v[0],
+				v[1],
+				v[2]
 			);
 		}
 		gl.useProgram(null);

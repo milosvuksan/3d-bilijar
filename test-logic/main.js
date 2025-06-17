@@ -84,7 +84,12 @@ function renderBalls(projectionMat, viewMat) {
         mat4.multiply(ballMvpMat, ballMvpMat, ballModelMat);
 
         WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [ballMvpMat]);
-        WebGLUtils.setUniform3f(gl, program, ["u_color"], ballColors[i]);
+        if (!ballColors[i]) {
+            console.warn(`ballColors[${i}] is undefined! Using fallback color.`);
+            WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[1,0,1]]); // fallback magenta
+        } else {
+            WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [ballColors[i]]);
+        }
         gl.useProgram(program);
         gl.bindVertexArray(VAOball);
         gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
@@ -373,7 +378,7 @@ function renderBalls(projectionMat, viewMat) {
     mat4.multiply(stickMvpMat, stickMvpMat, stickModelMat);
     
     WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [stickMvpMat]);
-    WebGLUtils.setUniform3f(gl, program, ["u_color"], [0.6, 0.3, 0.1]); // Brown color for stick
+    WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.6, 0.3, 0.1]]); // Brown color for stick
     gl.useProgram(program);
     gl.bindVertexArray(VAOball);
     gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
@@ -389,7 +394,7 @@ function renderBalls(projectionMat, viewMat) {
       mat4.multiply(pocketMvpMat, projectionMat, viewMat);
       mat4.multiply(pocketMvpMat, pocketMvpMat, pocketModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [pocketMvpMat]);
-      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0, 0, 0]); // Black color for pocket
+      WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[1, 0.5, 0]]); // Black color for pocket
       gl.useProgram(program);
       gl.bindVertexArray(VAOball);
       gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
@@ -426,7 +431,7 @@ function renderBalls(projectionMat, viewMat) {
       mat4.multiply(railMvpMat, projectionMat, viewMat);
       mat4.multiply(railMvpMat, railMvpMat, railModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
-      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0.4, 0.2, 0.05]);
+      WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.4, 0.2, 0.05]]);
       gl.useProgram(program);
       gl.bindVertexArray(VAOball);
       gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
@@ -442,7 +447,7 @@ function renderBalls(projectionMat, viewMat) {
       mat4.multiply(railMvpMat, projectionMat, viewMat);
       mat4.multiply(railMvpMat, railMvpMat, railModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
-      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0.4, 0.2, 0.05]);
+      WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.4, 0.2, 0.05]]);
       gl.useProgram(program);
       gl.bindVertexArray(VAOball);
       gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
@@ -459,7 +464,7 @@ function renderBalls(projectionMat, viewMat) {
       mat4.multiply(railMvpMat, projectionMat, viewMat);
       mat4.multiply(railMvpMat, railMvpMat, railModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
-      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0.4, 0.2, 0.05]);
+      WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.4, 0.2, 0.05]]);
       gl.useProgram(program);
       gl.bindVertexArray(VAOball);
       gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
@@ -475,7 +480,7 @@ function renderBalls(projectionMat, viewMat) {
       mat4.multiply(railMvpMat, projectionMat, viewMat);
       mat4.multiply(railMvpMat, railMvpMat, railModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
-      WebGLUtils.setUniform3f(gl, program, ["u_color"], [0.4, 0.2, 0.05]);
+      WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.4, 0.2, 0.05]]);
       gl.useProgram(program);
       gl.bindVertexArray(VAOball);
       gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
@@ -495,7 +500,7 @@ function renderBalls(projectionMat, viewMat) {
     mat4.multiply(tableMvpMat, projectionMat, viewMat);
     mat4.multiply(tableMvpMat, tableMvpMat, tableModelMat);
     WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [tableMvpMat]);
-    WebGLUtils.setUniform3f(gl, program, ["u_color"], [1.0, 1.0, 1.0]);
+    WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.0, 0.3, 0.0]]);
     gl.useProgram(program);
     gl.bindVertexArray(VAO);
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 8);
@@ -562,7 +567,7 @@ function renderBalls(projectionMat, viewMat) {
     mat4.multiply(ballMvpMat, ballMvpMat, ballModelMat);
     WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [tableMvpMat]);
     // Render table
-    gl.clearColor(0.0, 0.3, 0.0, 1.0);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
 
