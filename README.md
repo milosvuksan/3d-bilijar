@@ -6,10 +6,10 @@ Progress:
 
 Mouse camera input - finished
 
-Rules - not started
+Rules - almost finished
 
-Controls - not started
+Controls - finished
 
-Rules - not started
+Rules - started
 
-UI - not started
+UI - almost finished
