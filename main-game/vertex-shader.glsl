@@ -1,7 +1,7 @@
 #version 300 es
 precision mediump float;
 
-uniform mat4 u_mvp; // Model-View-Projection matrix
+uniform mat4 u_mvp; 
 
 in vec3 in_position;
 in vec3 in_normal;
