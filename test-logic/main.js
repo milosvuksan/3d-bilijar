@@ -176,7 +176,6 @@ function renderBalls(projectionMat, viewMat) {
       ballVelocities[0][0] = Math.sin(aimAngle) * shootPower;
       ballVelocities[0][2] = Math.cos(aimAngle) * shootPower;
       shootPower = 0;
-      canSwitchTurn = true;
       e.preventDefault();
     }
   });
@@ -296,10 +295,9 @@ function renderBalls(projectionMat, viewMat) {
             playerGroups[currentPlayer===1?2:1] = (color==='blue'?'red':'blue');
             firstGroupAssigned = true;
           }
-          // Always count for the player who owns this color
-          if (firstGroupAssigned) {
-            const owner = playerGroups[1] === color ? 1 : 2;
-            playerPocketed[owner].push(ballIndex);
+          // Only count if player has group assigned and this is their color
+          if (playerGroups[currentPlayer] === color) {
+            playerPocketed[currentPlayer].push(ballIndex);
           }
           updatePlayerInfo();
         }
@@ -529,7 +527,7 @@ function renderBalls(projectionMat, viewMat) {
   }
 
   // --- PLAYER TURN AND GROUP LOGIC ---
-let currentPlayer = 2; // 1 or 2
+let currentPlayer = 1; // 1 or 2, Player 1 always starts
 let playerGroups = { 1: null, 2: null }; // 'blue' or 'red'
 let playerPocketed = { 1: [], 2: [] };
 let firstGroupAssigned = false;
@@ -548,17 +546,11 @@ function updatePlayerInfo() {
   document.getElementById('player2-info').innerHTML =
     `<b>Player 2</b><br>Group: ${groupText(playerGroups[2])}<br>Pocketed: ${playerPocketed[2].length}`;
   // Show current turn in the center
-  const turnText = `Player ${currentPlayer}'s turn`;
   const turnDiv = document.getElementById('turn-info');
-  if (turnDiv) turnDiv.textContent = turnText;
+  if (turnDiv) turnDiv.textContent = `Player ${currentPlayer}'s turn`;
 }
 
 // --- MODIFIED POCKET COLLISION ---
-// Track what happened in the current shot
-let shotPocketed = false;
-let shotOwnBall = false;
-let shotFirstGroup = false;
-
 function checkPocketCollision(ballIndex) {
   const pos = ballPositions[ballIndex];
   for (let pocket of pockets) {
@@ -574,22 +566,20 @@ function checkPocketCollision(ballIndex) {
       // --- PLAYER LOGIC ---
       if (ballIndex !== 0 && ballIndex !== 5) { // not cue or black
         let color = blueBalls.includes(ballIndex) ? 'blue' : 'red';
-        shotPocketed = true;
         if (!firstGroupAssigned && (color==='blue'||color==='red')) {
           playerGroups[currentPlayer] = color;
           playerGroups[currentPlayer===1?2:1] = (color==='blue'?'red':'blue');
           firstGroupAssigned = true;
-          shotFirstGroup = true;
         }
-        if (firstGroupAssigned) {
-          const owner = playerGroups[1] === color ? 1 : 2;
-          playerPocketed[owner].push(ballIndex);
-          if (playerGroups[currentPlayer] === color) shotOwnBall = true;
+        // Only count if player has group assigned and this is their color
+        if (playerGroups[currentPlayer] === color) {
+          playerPocketed[currentPlayer].push(ballIndex);
         }
         updatePlayerInfo();
       }
       // Cue ball respot logic (unchanged)
       if (ballIndex === 0) {
+        // Use setTimeout to respot after a short delay for realism (optional)
         setTimeout(() => {
           ballPositions[0][0] = defaultCueBallPosition[0];
           ballPositions[0][1] = defaultCueBallPosition[1];
@@ -598,7 +588,7 @@ function checkPocketCollision(ballIndex) {
           ballVelocities[0][1] = 0;
           ballVelocities[0][2] = 0;
           pocketedBalls[0] = false;
-        }, 500);
+        }, 500); // 0.5s delay before respotting
       }
       return true;
     }
@@ -607,33 +597,25 @@ function checkPocketCollision(ballIndex) {
 }
 
 // --- TURN SWITCHING ---
-let canSwitchTurn = true;
+function allBallsStopped() {
+  return ballVelocities.every(v => Math.abs(v[0])<0.001 && Math.abs(v[2])<0.001);
+}
 let lastPocketedCount = 0;
+let canSwitchTurn = false; // Prevent turn switching at start
 function checkTurnSwitch() {
   if (allBallsStopped()) {
     let totalPocketed = playerPocketed[1].length + playerPocketed[2].length;
     if (canSwitchTurn) {
-      // Only switch if:
-      // - No ball pocketed, or
-      // - Ball(s) pocketed but not own and not first group
-      if (!shotPocketed || (!shotOwnBall && !shotFirstGroup)) {
+      if (totalPocketed === lastPocketedCount) {
         currentPlayer = currentPlayer===1 ? 2 : 1;
         updatePlayerInfo();
       }
       lastPocketedCount = totalPocketed;
       canSwitchTurn = false;
-      // Reset shot flags for next shot
-      shotPocketed = false;
-      shotOwnBall = false;
-      shotFirstGroup = false;
     }
   } else {
     canSwitchTurn = true;
   }
-}
-
-function allBallsStopped() {
-  return ballVelocities.every(v => Math.abs(v[0]) < 0.001 && Math.abs(v[2]) < 0.001);
 }
 
   function render() {
