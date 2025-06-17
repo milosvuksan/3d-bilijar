@@ -362,7 +362,7 @@ function renderBalls(projectionMat, viewMat) {
     const pullBack = isAiming ? shootPower * 2 : 0; // Pull back more as you charge
     const stickOffset = 0.10 + pullBack; // Move the whole stick back
     const stickEnd = [
-        cuePos[0] - Math.sin(aimAngle) * (stickOffset),
+        cuePos[0] - Math.sin(aimAngle) * (stickOffset) + 0.0268,
         cuePos[1],
         cuePos[2] - Math.cos(aimAngle) * (stickOffset)
     ];
