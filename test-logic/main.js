@@ -13,8 +13,7 @@ async function main() {
 
   const vertices = await WebGLUtils.loadOBJ("../temp-obj/temp-table.obj", true);
   const verticesball = await WebGLUtils.loadOBJ("../temp-obj/temp-ball.obj",true);
-  // Use temp-table for cue stick as well:
-  const verticescue = vertices;
+  const verticescue = await WebGLUtils.loadOBJ("../temp-obj/stick.obj", true); // Use stick.obj for cue stick
   const program = await WebGLUtils.createProgram(gl, "vertex-shader.glsl", "fragment-shader.glsl");
 
 const ballPositions = [
@@ -133,6 +132,8 @@ function renderBalls(projectionMat, viewMat) {
   let isAiming = false; // Now used only for charging/shooting, not for aiming direction
   let shootPower = 0;
   let aimAngle = 0; // Angle in radians (re-added)
+  let targetAimAngle = 0; // For smooth transition
+  const aimLerpSpeed = 0.15; // Lower = smoother, higher = snappier
   let maxShootPower = 0.5;
   const ballRadius = 0.09;
 
@@ -159,10 +160,10 @@ function renderBalls(projectionMat, viewMat) {
     // Allow aim angle input if cue ball is stationary and not pocketed
     if (canShoot()) {
       if (e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'arrowleft') {
-        aimAngle -= 0.017;
+        targetAimAngle -= 0.037;
       }
       if (e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'arrowright') {
-        aimAngle += 0.017;
+        targetAimAngle += 0.037;
       }
     }
   });
@@ -220,8 +221,10 @@ function renderBalls(projectionMat, viewMat) {
     { name: "in_normal", size: 3, offset: 5 },
   ]);
 
-  // Use VAO for temp-table as cue stick
-  const VAOcue = VAO;
+  const VAOcue = WebGLUtils.createVAO(gl, program, verticescue, 8, [
+    { name: "in_position", size: 3, offset: 0 },
+    { name: "in_normal", size: 3, offset: 5 },
+  ]);
 
   function checkBallCollision(ball1Pos, ball1Vel, ball2Pos, ball2Vel) {
     const dx = ball1Pos[0] - ball2Pos[0];
@@ -354,25 +357,21 @@ function renderBalls(projectionMat, viewMat) {
     if (!canShoot() && !isAiming) return;
     
     const cuePos = ballPositions[0]; // Cue ball position
-    const stickLength = 1.5 + shootPower * 2;
-    
-    // Calculate stick position based on aim angle
+    const stickLength = 1.6; // Use the OBJ's length, do not stretch
+    // When charging, move the stick further away from the ball
+    const pullBack = isAiming ? shootPower * 2 : 0; // Pull back more as you charge
+    const stickOffset = 0.10 + pullBack; // Move the whole stick back
     const stickEnd = [
-        cuePos[0] - Math.sin(aimAngle) * stickLength,
+        cuePos[0] - Math.sin(aimAngle) * (stickOffset),
         cuePos[1],
-        cuePos[2] - Math.cos(aimAngle) * stickLength
+        cuePos[2] - Math.cos(aimAngle) * (stickOffset)
     ];
-    
-    // Simple line rendering for cue stick (you might want to replace with actual geometry)
+
     const stickModelMat = mat4.create();
     mat4.translate(stickModelMat, stickModelMat, stickEnd);
-    
-    // Rotate the stick to align with aim direction
-    mat4.rotateY(stickModelMat, stickModelMat, aimAngle);
-    
-    // Scale to make it look like a stick
-    mat4.scale(stickModelMat, stickModelMat, [0.02, 0.02, stickLength]);
-    
+    mat4.rotateY(stickModelMat, stickModelMat, aimAngle + Math.PI); // Fix aim direction and flip
+    mat4.scale(stickModelMat, stickModelMat, [1, 1, stickLength]); // Use stick.obj's proportions
+
     const stickMvpMat = mat4.create();
     mat4.multiply(stickMvpMat, projectionMat, viewMat);
     mat4.multiply(stickMvpMat, stickMvpMat, stickModelMat);
@@ -380,8 +379,8 @@ function renderBalls(projectionMat, viewMat) {
     WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [stickMvpMat]);
     WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.6, 0.3, 0.1]]); // Brown color for stick
     gl.useProgram(program);
-    gl.bindVertexArray(VAOball);
-    gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+    gl.bindVertexArray(VAOcue);
+    gl.drawArrays(gl.TRIANGLES, 0, verticescue.length / 8);
   }
 
   // --- Update rendering of pockets to use correct Y position ---
@@ -394,7 +393,7 @@ function renderBalls(projectionMat, viewMat) {
       mat4.multiply(pocketMvpMat, projectionMat, viewMat);
       mat4.multiply(pocketMvpMat, pocketMvpMat, pocketModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [pocketMvpMat]);
-      WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[1, 0.5, 0]]); // Black color for pocket
+      WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0, 0, 0]]); // Black color for pocket
       gl.useProgram(program);
       gl.bindVertexArray(VAOball);
       gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
@@ -419,71 +418,78 @@ function renderBalls(projectionMat, viewMat) {
     const railLengthZ = Math.abs(tableMaxZ - tableMinZ) - 2 * pocketRadiusCorner;
 
     // Horizontal rails (bottom and top)
-    // Bottom rail: between bottom-left and bottom-right pockets
     {
       const z = tableMinZ;
-      const xMid = (tableMinX + tableMaxX) / 2;
+      const xMid = (tableMinX + tableMaxX) / 2 + 1.6;
       const railModelMat = mat4.create();
-      // Move rail center between pockets, not corners
       mat4.translate(railModelMat, railModelMat, [xMid, railY, z]);
-      mat4.scale(railModelMat, railModelMat, [railLengthX / 2, railHeight, railWidth / 2]);
+      mat4.rotateY(railModelMat, railModelMat, 0); // No rotation for horizontal
+      // Center stick.obj: move by -0.8 in z (half its length)
+      mat4.translate(railModelMat, railModelMat, [-0.2, 0, 0]);
+      mat4.scale(railModelMat, railModelMat, [railLengthX / 1.6 + 2.4, railHeight / 0.05, railWidth / 0.05 + 0.12]);
       const railMvpMat = mat4.create();
       mat4.multiply(railMvpMat, projectionMat, viewMat);
       mat4.multiply(railMvpMat, railMvpMat, railModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
       WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.4, 0.2, 0.05]]);
       gl.useProgram(program);
-      gl.bindVertexArray(VAOball);
-      gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+      gl.bindVertexArray(VAOcue);
+      gl.drawArrays(gl.TRIANGLES, 0, verticescue.length / 8);
     }
     // Top rail: between top-left and top-right pockets
     {
       const z = tableMaxZ;
-      const xMid = (tableMinX + tableMaxX) / 2;
+      const xMid = (tableMinX + tableMaxX) / 2 - 1.6;
       const railModelMat = mat4.create();
       mat4.translate(railModelMat, railModelMat, [xMid, railY, z]);
-      mat4.scale(railModelMat, railModelMat, [railLengthX / 2, railHeight, railWidth / 2]);
+      mat4.rotateY(railModelMat, railModelMat, 0); // No rotation for horizontal
+      mat4.translate(railModelMat, railModelMat, [0, 0, -6]);
+      mat4.scale(railModelMat, railModelMat, [railLengthX / 1.6 + 2.4, railHeight / 0.05, railWidth / 0.05 + 0.2]);
       const railMvpMat = mat4.create();
       mat4.multiply(railMvpMat, projectionMat, viewMat);
       mat4.multiply(railMvpMat, railMvpMat, railModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
       WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.4, 0.2, 0.05]]);
       gl.useProgram(program);
-      gl.bindVertexArray(VAOball);
-      gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+      gl.bindVertexArray(VAOcue);
+      gl.drawArrays(gl.TRIANGLES, 0, verticescue.length / 8);
     }
     // Vertical rails (left and right)
     // Left rail: between bottom-left and top-left pockets
     {
       const x = tableMinX;
-      const zMid = (tableMinZ + tableMaxZ) / 2;
+      const zMid = (tableMinZ + tableMaxZ) / 2 - 2.93;
       const railModelMat = mat4.create();
       mat4.translate(railModelMat, railModelMat, [x, railY, zMid]);
-      mat4.scale(railModelMat, railModelMat, [railWidth / 2, railHeight, railLengthZ / 2]);
+      mat4.rotateY(railModelMat, railModelMat, Math.PI / 2); // Rotate 90 deg for vertical
+      mat4.translate(railModelMat, railModelMat, [0, 0, 0]);
+      mat4.scale(railModelMat, railModelMat, [railLengthZ / 1.6, railHeight / 0.05, railWidth / 0.05 - 1.67]);
       const railMvpMat = mat4.create();
       mat4.multiply(railMvpMat, projectionMat, viewMat);
       mat4.multiply(railMvpMat, railMvpMat, railModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
       WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.4, 0.2, 0.05]]);
       gl.useProgram(program);
-      gl.bindVertexArray(VAOball);
-      gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+      gl.bindVertexArray(VAOcue);
+      gl.drawArrays(gl.TRIANGLES, 0, verticescue.length / 8);
     }
     // Right rail: between bottom-right and top-right pockets
     {
       const x = tableMaxX;
-      const zMid = (tableMinZ + tableMaxZ) / 2;
+      const zMid = (tableMinZ + tableMaxZ) / 2 + 3.1;
       const railModelMat = mat4.create();
       mat4.translate(railModelMat, railModelMat, [x, railY, zMid]);
-      mat4.scale(railModelMat, railModelMat, [railWidth / 2, railHeight, railLengthZ / 2]);
+      mat4.rotateY(railModelMat, railModelMat, Math.PI / 2); // Rotate 90 deg for vertical
+      mat4.translate(railModelMat, railModelMat, [0, 0, -3]);
+      mat4.scale(railModelMat, railModelMat, [railLengthZ / 1.6, railHeight / 0.05, railWidth / 0.05 - 1.7]);
       const railMvpMat = mat4.create();
       mat4.multiply(railMvpMat, projectionMat, viewMat);
       mat4.multiply(railMvpMat, railMvpMat, railModelMat);
       WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [railMvpMat]);
       WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[0.4, 0.2, 0.05]]);
       gl.useProgram(program);
-      gl.bindVertexArray(VAOball);
-      gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+      gl.bindVertexArray(VAOcue);
+      gl.drawArrays(gl.TRIANGLES, 0, verticescue.length / 8);
     }
   }
 
@@ -523,6 +529,9 @@ function renderBalls(projectionMat, viewMat) {
       pitch += deltaY * 0.01;
       pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
     }
+
+    // Smoothly interpolate aimAngle toward targetAimAngle
+    aimAngle += (targetAimAngle - aimAngle) * aimLerpSpeed;
 
     // Calculate camera position
     const eye = [
@@ -567,7 +576,7 @@ function renderBalls(projectionMat, viewMat) {
     mat4.multiply(ballMvpMat, ballMvpMat, ballModelMat);
     WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [tableMvpMat]);
     // Render table
-    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
 
@@ -580,7 +589,6 @@ function renderBalls(projectionMat, viewMat) {
     renderPockets(projectionMat, viewMat); // Draw pockets as holes
     renderBalls(projectionMat, viewMat);
     renderCueStick(projectionMat, viewMat);
-
     requestAnimationFrame(render);
   }
 

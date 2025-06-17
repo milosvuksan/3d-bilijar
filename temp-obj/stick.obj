@@ -1,0 +1,45 @@
+# Simple cue stick (rectangular prism) OBJ with normals and texcoords
+
+# Vertices (thicker stick: 0.05 x 0.05)
+v 0.00 0.00 0.00
+v 0.05 0.00 0.00
+v 0.05 0.05 0.00
+v 0.00 0.05 0.00
+v 0.00 0.00 1.60
+v 0.05 0.00 1.60
+v 0.05 0.05 1.60
+v 0.00 0.05 1.60
+
+# Texture coordinates (dummy, just corners)
+vt 0.0 0.0
+vt 1.0 0.0
+vt 1.0 1.0
+vt 0.0 1.0
+
+# Normals
+vn 0 0 -1
+vn 0 0 1
+vn 0 -1 0
+vn 0 1 0
+vn -1 0 0
+vn 1 0 0
+
+# Faces (all triangles, CCW winding)
+# Front face (z=0)
+f 1/1/1 3/3/1 2/2/1
+f 1/1/1 4/4/1 3/3/1
+# Back face (z=1.6, tip)
+f 5/1/2 6/2/2 7/3/2
+f 5/1/2 7/3/2 8/4/2
+# Bottom face (y=0)
+f 1/1/3 2/2/3 6/3/3
+f 1/1/3 6/3/3 5/4/3
+# Top face (y=0.05)
+f 4/1/4 8/4/4 7/3/4
+f 4/1/4 7/3/4 3/2/4
+# Left face (x=0)
+f 1/1/5 5/4/5 8/3/5
+f 1/1/5 8/3/5 4/2/5
+# Right face (x=0.05)
+f 2/1/6 3/2/6 7/3/6
+f 2/1/6 7/3/6 6/4/6
