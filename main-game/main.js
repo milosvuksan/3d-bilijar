@@ -158,19 +158,6 @@ import MouseInput from '../MouseInput.js';
     }
 
 
-    // convert world coordinates to screen coordinates
-    function worldToScreen(worldPos, projMat, viewMat, screenWidth, screenHeight) {
-      const mvpMat = mat4.create();
-      mat4.multiply(mvpMat, projMat, viewMat);
-      
-      const clipPos = vec3.create();
-      vec3.transformMat4(clipPos, worldPos, mvpMat);
-      
-      return [
-        (clipPos[0] + 1) * screenWidth / 2,
-        (1 - clipPos[1]) * screenHeight / 2
-      ];
-    }
 
     //view manipulation with mouse controls
     gl.canvas.addEventListener('wheel', (e) => {
