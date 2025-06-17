@@ -13,39 +13,41 @@ async function main() {
 
   const vertices = await WebGLUtils.loadOBJ("../temp-obj/temp-table.obj", true);
   const verticesball = await WebGLUtils.loadOBJ("../temp-obj/temp-ball.obj",true);
+  // Use temp-table for cue stick as well:
+  const verticescue = vertices;
   const program = await WebGLUtils.createProgram(gl, "vertex-shader.glsl", "fragment-shader.glsl");
 
 const ballPositions = [
     // Cue ball
-    [0.0, 0.57, -1.0],        // Cue ball (white ball)
+    [0.0, 0.67, -1.0],        // Cue ball (white ball)
 
     // Triangle formation (15 balls)
     // The triangle's front is at z = 1.0, each row behind is spaced by sqrt(3)*radius
     // Each ball is 0.09 radius, so row spacing is ~0.156
     // Centered on x = 0
-    [0.0, 0.57, 1.0], // Front ball
+    [0.0, 0.67, 1.0], // Front ball
 
     // Second row (2 balls)
-    [-0.09, 0.57, 1.0 + 0.156], // left
-    [0.09, 0.57, 1.0 + 0.156],  // right
+    [-0.09, 0.67, 1.0 + 0.156], // left
+    [0.09, 0.67, 1.0 + 0.156],  // right
 
     // Third row (3 balls)
-    [-0.18, 0.57, 1.0 + 0.156 * 2],
-    [0.0, 0.57, 1.0 + 0.156 * 2],
-    [0.18, 0.57, 1.0 + 0.156 * 2],
+    [-0.18, 0.67, 1.0 + 0.156 * 2],
+    [0.0, 0.67, 1.0 + 0.156 * 2],
+    [0.18, 0.67, 1.0 + 0.156 * 2],
 
     // Fourth row (4 balls)
-    [-0.27, 0.57, 1.0 + 0.156 * 3],
-    [-0.09, 0.57, 1.0 + 0.156 * 3],
-    [0.09, 0.57, 1.0 + 0.156 * 3],
-    [0.27, 0.57, 1.0 + 0.156 * 3],
+    [-0.27, 0.67, 1.0 + 0.156 * 3],
+    [-0.09, 0.67, 1.0 + 0.156 * 3],
+    [0.09, 0.67, 1.0 + 0.156 * 3],
+    [0.27, 0.67, 1.0 + 0.156 * 3],
 
     // Fifth row (5 balls)
-    [-0.36, 0.57, 1.0 + 0.156 * 4],
-    [-0.18, 0.57, 1.0 + 0.156 * 4],
-    [0.0, 0.57, 1.0 + 0.156 * 4],
-    [0.18, 0.57, 1.0 + 0.156 * 4],
-    [0.36, 0.57, 1.0 + 0.156 * 4],
+    [-0.36, 0.67, 1.0 + 0.156 * 4],
+    [-0.18, 0.67, 1.0 + 0.156 * 4],
+    [0.0, 0.67, 1.0 + 0.156 * 4],
+    [0.18, 0.67, 1.0 + 0.156 * 4],
+    [0.36, 0.67, 1.0 + 0.156 * 4],
 ];
 
 // Ball colors (you might want to adjust these)
@@ -125,7 +127,7 @@ function renderBalls(projectionMat, viewMat) {
   // Shooting variables
   let isAiming = false; // Now used only for charging/shooting, not for aiming direction
   let shootPower = 0;
-  let aimAngle = 0; // Angle in radians
+  let aimAngle = 0; // Angle in radians (re-added)
   let maxShootPower = 0.5;
   const ballRadius = 0.09;
 
@@ -148,6 +150,15 @@ function renderBalls(projectionMat, viewMat) {
       shootStartTime = Date.now();
       shootPower = 0;
       e.preventDefault();
+    }
+    // Allow aim angle input if cue ball is stationary and not pocketed
+    if (canShoot()) {
+      if (e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'arrowleft') {
+        aimAngle -= 0.017;
+      }
+      if (e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'arrowright') {
+        aimAngle += 0.017;
+      }
     }
   });
 
@@ -204,6 +215,9 @@ function renderBalls(projectionMat, viewMat) {
     { name: "in_normal", size: 3, offset: 5 },
   ]);
 
+  // Use VAO for temp-table as cue stick
+  const VAOcue = VAO;
+
   function checkBallCollision(ball1Pos, ball1Vel, ball2Pos, ball2Vel) {
     const dx = ball1Pos[0] - ball2Pos[0];
     const dz = ball1Pos[2] - ball2Pos[2];
@@ -246,7 +260,7 @@ function renderBalls(projectionMat, viewMat) {
   }
 
   // Default cue ball position
-  const defaultCueBallPosition = [0.0, 0.57, -1.0];
+  const defaultCueBallPosition = [0.0, 0.67, -1.0];
 
   function checkPocketCollision(ballIndex) {
     const pos = ballPositions[ballIndex];
@@ -287,15 +301,7 @@ function renderBalls(projectionMat, viewMat) {
 
   function updatePhysics() {
     // Allow aim angle input if cue ball is stationary and not pocketed
-    if (canShoot()) {
-      if (keys['a'] || keys['arrowleft']) {
-        aimAngle -= 0.05;
-      }
-      if (keys['d'] || keys['arrowright']) {
-        aimAngle += 0.05;
-      }
-    }
-
+    // (Handled in keydown event now)
     for (let i = 0; i < ballPositions.length; i++) {
         // Skip pocketed balls
         if (pocketedBalls[i]) continue;
@@ -476,6 +482,25 @@ function renderBalls(projectionMat, viewMat) {
     }
   }
 
+  // Table scale and position (edit these to move/scale the table)
+  const tableScale = [1.6, 1.6, 1.55];
+  const tablePosition = [0, -0.2, 0]; // [x, y, z] position of table center
+
+  function renderTable(projectionMat, viewMat) {
+    // Table model matrix (apply translation and scaling)
+    const tableModelMat = mat4.create();
+    mat4.translate(tableModelMat, tableModelMat, tablePosition);
+    mat4.scale(tableModelMat, tableModelMat, tableScale);
+    const tableMvpMat = mat4.create();
+    mat4.multiply(tableMvpMat, projectionMat, viewMat);
+    mat4.multiply(tableMvpMat, tableMvpMat, tableModelMat);
+    WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [tableMvpMat]);
+    WebGLUtils.setUniform3f(gl, program, ["u_color"], [1.0, 1.0, 1.0]);
+    gl.useProgram(program);
+    gl.bindVertexArray(VAO);
+    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 8);
+  }
+
   function render() {
     // Update physics
     updatePhysics();
@@ -540,6 +565,8 @@ function renderBalls(projectionMat, viewMat) {
     gl.clearColor(0.0, 0.3, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
+
+    renderTable(projectionMat, viewMat);
 
     gl.bindVertexArray(VAO);
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 8);
