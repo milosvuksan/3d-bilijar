@@ -152,9 +152,8 @@ import MouseInput from '../MouseInput.js';
     // check if cue ball is stationary and not pocketed
     function canShoot() {
       return !gameOver &&  // end game if game over
-        !pocketedBalls[0] &&
-        Math.abs(ballVelocities[0][0]) < 0.001 &&
-        Math.abs(ballVelocities[0][2]) < 0.001;
+      !pocketedBalls[0] &&
+      ballVelocities.every(v => Math.abs(v[0]) < 0.001 && Math.abs(v[2]) < 0.001);
     }
 
 
