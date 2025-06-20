@@ -1,15 +1,18 @@
 # 3d-bilijar
 
-Logic testing
+[Demo](https://losmi.rs/projects/3d-bilijar/main-game/game.html)
 
-Progress:
 
-Mouse camera input - finished
+Completed:
 
-Rules - almost finished
+Logic
 
-Controls - finished
+Rules
 
-Rules - started
+Unfinished:
 
-UI - almost finished
+Design
+
+Not started:
+
+AI and multiplayer
