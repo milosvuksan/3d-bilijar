@@ -80,6 +80,21 @@ import MouseInput from '../MouseInput.js';
       }
   }
 
+  //cue ball placement mode
+  function renderCueBallPlacement(projectionMat, viewMat) {
+    if (!cueBallPlacementMode) return;
+    const ballModelMat = mat4.create();
+    mat4.translate(ballModelMat, ballModelMat, cueBallPlacementPos);
+    mat4.scale(ballModelMat, ballModelMat, [ballRadius, ballRadius, ballRadius]);
+    const ballMvpMat = mat4.create();
+    mat4.multiply(ballMvpMat, projectionMat, viewMat);
+    mat4.multiply(ballMvpMat, ballMvpMat, ballModelMat);
+    WebGLUtils.setUniformMatrix4fv(gl, program, ["u_mvp"], [ballMvpMat]);
+    WebGLUtils.setUniform3f(gl, program, ["u_object_color"], [[1.0, 1.0, 0.0]]); // yellow preview
+    gl.useProgram(program);
+    gl.bindVertexArray(VAOball);
+    gl.drawArrays(gl.TRIANGLES, 0, verticesball.length / 8);
+  }
 
     const ballVelocities = ballPositions.map(() => [0, 0, 0]);
     const friction = 0.98;
@@ -118,9 +133,69 @@ import MouseInput from '../MouseInput.js';
     let isMouseDown = false;
     let shootStartTime = 0;
     let keys = {};
+    const defaultCueBallPosition = [0.0, 0.67, -1.0];
+    let cueBallPlacementMode = false;
+    let cueBallPlacementPos = [defaultCueBallPosition[0], defaultCueBallPosition[1], defaultCueBallPosition[2]];
+    const cueBallPlacementStep = 0.05;
 
-    // Keyboard listener
+    // Foul tracking for cue ball placement
+let firstBallHit = null;
+let cueBallHitRailFirst = false;
+let cueBallHitAnyBall = false;
+
+function resetFoulTracking() {
+  firstBallHit = null;
+  cueBallHitRailFirst = false;
+  cueBallHitAnyBall = false;
+}
+
+// Keyboard listener
     window.addEventListener('keydown', (e) => {
+      if (cueBallPlacementMode) {
+        let [x, y, z] = cueBallPlacementPos;
+        if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') {
+          x += cueBallPlacementStep;
+        }
+        if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') {
+          x -= cueBallPlacementStep;
+        }
+        if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+          z += cueBallPlacementStep;
+        }
+        if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') {
+          z -= cueBallPlacementStep;
+        }
+        // Clamp to table bounds
+        x = Math.max(tableMinX + ballRadius, Math.min(tableMaxX - ballRadius, x));
+        z = Math.max(tableMinZ + ballRadius, Math.min(tableMaxZ - ballRadius, z));
+        cueBallPlacementPos = [x, y, z];
+        if (e.key === 'Enter') {
+          // Check for collision with other balls
+          let valid = true;
+          for (let i = 1; i < ballPositions.length; i++) {
+            if (pocketedBalls[i]) continue;
+            const dx = ballPositions[i][0] - x;
+            const dz = ballPositions[i][2] - z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < ballRadius * 2) {
+              valid = false;
+              break;
+            }
+          }
+          if (valid) {
+            ballPositions[0][0] = x;
+            ballPositions[0][1] = y;
+            ballPositions[0][2] = z;
+            ballVelocities[0][0] = 0;
+            ballVelocities[0][1] = 0;
+            ballVelocities[0][2] = 0;
+            pocketedBalls[0] = false;
+            cueBallPlacementMode = false;
+          }
+        }
+        e.preventDefault();
+        return;
+      }
       keys[e.key.toLowerCase()] = true;
       if ((e.key === ' ' || e.code === 'Space') && canShoot() && !isAiming) {
         isAiming = true;
@@ -181,12 +256,19 @@ import MouseInput from '../MouseInput.js';
     ]);
 
     //ball collision and position fix and velocity stuff
-    function checkBallCollision(ball1Pos, ball1Vel, ball2Pos, ball2Vel) {
+    function checkBallCollision(ball1Pos, ball1Vel, ball2Pos, ball2Vel, i, j) {
       const dx = ball1Pos[0] - ball2Pos[0];
       const dz = ball1Pos[2] - ball2Pos[2];
       const distance = Math.sqrt(dx * dx + dz * dz);
-      
       if (distance < ballRadius * 2) {
+        // Track first ball hit by cue ball
+        if (i === 0 && firstBallHit === null) {
+          firstBallHit = j;
+          cueBallHitAnyBall = true;
+        } else if (j === 0 && firstBallHit === null) {
+          firstBallHit = i;
+          cueBallHitAnyBall = true;
+        }
         const nx = dx / distance;
         const nz = dz / distance;
         
@@ -215,8 +297,7 @@ import MouseInput from '../MouseInput.js';
       }
     }
 
-    // default cue ball position
-    const defaultCueBallPosition = [0.0, 0.67, -1.0];
+
 
     function checkPocketCollision(ballIndex) {
       const pos = ballPositions[ballIndex];
@@ -252,6 +333,13 @@ import MouseInput from '../MouseInput.js';
             updatePlayerInfo();
           }
 
+          if (ballIndex === 0) {
+            setTimeout(() => {
+              cueBallPlacementMode = true;
+              cueBallPlacementPos = [defaultCueBallPosition[0], defaultCueBallPosition[1], defaultCueBallPosition[2]];
+            }, 500);
+          }
+
           return true;
         }
       }
@@ -273,8 +361,8 @@ import MouseInput from '../MouseInput.js';
           ballVelocities[i][2] *= friction;
           
           // stop slow balls
-          if (Math.abs(ballVelocities[i][0]) < 0.001) ballVelocities[i][0] = 0;
-          if (Math.abs(ballVelocities[i][2]) < 0.001) ballVelocities[i][2] = 0;
+          if (Math.abs(ballVelocities[i][0]) < 0.0001) ballVelocities[i][0] = 0;
+          if (Math.abs(ballVelocities[i][2]) < 0.0001) ballVelocities[i][2] = 0;
 
           if (checkPocketCollision(i)) {
             continue;
@@ -284,10 +372,12 @@ import MouseInput from '../MouseInput.js';
           if (ballPositions[i][0] <= tableMinX + ballRadius || ballPositions[i][0] >= tableMaxX - ballRadius) {
               ballVelocities[i][0] *= -0.8;
               ballPositions[i][0] = Math.max(tableMinX + ballRadius, Math.min(tableMaxX - ballRadius, ballPositions[i][0]));
+              if (i === 0 && !cueBallHitAnyBall) cueBallHitRailFirst = true;
           }
           if (ballPositions[i][2] <= tableMinZ + ballRadius || ballPositions[i][2] >= tableMaxZ - ballRadius) {
               ballVelocities[i][2] *= -0.8;
               ballPositions[i][2] = Math.max(tableMinZ + ballRadius, Math.min(tableMaxZ - ballRadius, ballPositions[i][2]));
+              if (i === 0 && !cueBallHitAnyBall) cueBallHitRailFirst = true;
           }
       }
       
@@ -296,7 +386,7 @@ import MouseInput from '../MouseInput.js';
         if (pocketedBalls[i]) continue;
         for (let j = i + 1; j < ballPositions.length; j++) {
           if (pocketedBalls[j]) continue;
-          checkBallCollision(ballPositions[i], ballVelocities[i], ballPositions[j], ballVelocities[j]);
+          checkBallCollision(ballPositions[i], ballVelocities[i], ballPositions[j], ballVelocities[j], i, j);
         }
       }
     }
@@ -308,8 +398,9 @@ import MouseInput from '../MouseInput.js';
       const stickLength = 1.6; 
       const pullBack = isAiming ? shootPower * 2 : 0; 
       const stickOffset = 0.10 + pullBack; 
+      // Center the stick exactly on the cue ball, no lateral offset
       const stickEnd = [
-          cuePos[0] - Math.sin(aimAngle) * (stickOffset) + 0.0268,
+          cuePos[0] - Math.sin(aimAngle) * (stickOffset),
           cuePos[1],
           cuePos[2] - Math.cos(aimAngle) * (stickOffset)
       ];
@@ -482,7 +573,7 @@ import MouseInput from '../MouseInput.js';
     if (turnDiv) {
       if (gameOver) {
         turnDiv.textContent = `Player ${winner} won!`;
-        turnDiv.style.color = 'gold';
+        turnDiv.style.color = 'green';
         turnDiv.style.fontWeight = 'bold';
         turnDiv.style.fontSize = '24px';
       } else {
@@ -544,13 +635,8 @@ import MouseInput from '../MouseInput.js';
 
         if (ballIndex === 0) {
           setTimeout(() => {
-            ballPositions[0][0] = defaultCueBallPosition[0];
-            ballPositions[0][1] = defaultCueBallPosition[1];
-            ballPositions[0][2] = defaultCueBallPosition[2];
-            ballVelocities[0][0] = 0;
-            ballVelocities[0][1] = 0;
-            ballVelocities[0][2] = 0;
-            pocketedBalls[0] = false;
+            cueBallPlacementMode = true;
+            cueBallPlacementPos = [defaultCueBallPosition[0], defaultCueBallPosition[1], defaultCueBallPosition[2]];
           }, 500);
         }
         return true;
@@ -569,14 +655,36 @@ import MouseInput from '../MouseInput.js';
     if (gameOver) return; 
     
     if (allBallsStopped()) {
-      let totalPocketed = playerPocketed[1].length + playerPocketed[2].length;
-      if (canSwitchTurn) {
-        if (totalPocketed === lastPocketedCount) {
-          currentPlayer = currentPlayer===1 ? 2 : 1;
-          updatePlayerInfo();
+      // FOUL CHECK
+      let foul = false;
+      // Only check if cue ball is not pocketed
+      if (!pocketedBalls[0]) {
+        // Determine correct group
+        let groupBalls = playerGroups[currentPlayer] === 'blue' ? blueBalls : redBalls;
+        if (playerGroups[currentPlayer] && (firstBallHit === null || !groupBalls.includes(firstBallHit))) {
+          foul = true;
         }
-        lastPocketedCount = totalPocketed;
+        if (!cueBallHitAnyBall || cueBallHitRailFirst) {
+          foul = true;
+        }
+      }
+      if (canSwitchTurn) {
+        if (foul) {
+          // Activate cue ball placement for opponent
+          setTimeout(() => {
+            cueBallPlacementMode = true;
+            cueBallPlacementPos = [defaultCueBallPosition[0], defaultCueBallPosition[1], defaultCueBallPosition[2]];
+          }, 500);
+        } else {
+          let totalPocketed = playerPocketed[1].length + playerPocketed[2].length;
+          if (totalPocketed === lastPocketedCount) {
+            currentPlayer = currentPlayer===1 ? 2 : 1;
+            updatePlayerInfo();
+          }
+          lastPocketedCount = playerPocketed[1].length + playerPocketed[2].length;
+        }
         canSwitchTurn = false;
+        resetFoulTracking();
       }
     } else {
       canSwitchTurn = true;
@@ -584,8 +692,10 @@ import MouseInput from '../MouseInput.js';
   }
 
     function render() {
-      updatePhysics();
-      checkTurnSwitch();
+      if (!cueBallPlacementMode) {
+        updatePhysics();
+        checkTurnSwitch();
+      }
       
       if (isAiming && canShoot()) {
         const elapsed = (Date.now() - shootStartTime) / 1000;
@@ -650,10 +760,13 @@ import MouseInput from '../MouseInput.js';
       renderPockets(projectionMat, viewMat); 
       renderBalls(projectionMat, viewMat);
       renderCueStick(projectionMat, viewMat);
+      renderCueBallPlacement(projectionMat, viewMat);
       requestAnimationFrame(render);
     }
 
     render();
   }
+
+
 
 main();
